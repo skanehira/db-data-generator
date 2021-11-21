@@ -1,0 +1,21 @@
+database: mysql
+tables:
+  - name: users
+    columns:
+      - name: id
+        type: string
+        value: xid
+      - name: name
+        type: string
+        value:
+          - gorilla
+          - godzilla
+          - dog
+          - cat
+          - human
+      - name: age
+        type: int
+        value:
+          - 10
+          - 15
+          - 33

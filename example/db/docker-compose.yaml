@@ -1,0 +1,21 @@
+version: '3.7'
+
+services:
+  mysql:
+    image: mysql:8.0
+    networks:
+      - db-data-generator
+    ports:
+      - 3399:3306
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./init.d:/docker-entrypoint-initdb.d
+      - ./conf.d:/etc/mysql/conf.d
+    environment:
+      - "TZ=${TZ:-Asia/Tokyo}"
+    env_file: .env
+    platform: linux/amd64
+
+networks:
+  db-data-generator:
+    name: db-data-generator
