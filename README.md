@@ -6,22 +6,60 @@
 ![GitHub Release Status](https://img.shields.io/github/workflow/status/skanehira/db-data-generator/Release?label=release)
 
 # db-data-generator
-This is template that help you to quick implement some CLI using Go.
-
-This repository is contains following.
-
-- minimal CLI implementation using [spf13/cobra](https://github.com/spf13/cobra)
-- CI/CD
-  - golangci-lint
-  - go test
-  - goreleaser
-  - dependabot for github-actions and Go
-  - CodeQL Analysis (Go)
+Generate test data to database.
 
 ## How to use
-1. fork this repository
-2. replace `skanehira` to your user name using `sed`(or others)
-3. run `make init`
+```sh
+$ db-data-generator -h
+Usage:
+  db-data-generator [flags]
+  db-data-generator [command]
+
+Available Commands:
+  version
+  completion  generate the autocompletion script for the specified shell
+  help        Help about any command
+
+Flags:
+  -D, --database string   database name
+  -f, --file string       setting file
+  -h, --help              help for db-data-generator
+      --host string       database host
+  -l, --limit string      generate table rows limit
+  -p, --password string   password
+  -P, --port string       database port
+  -u, --user string       user name
+
+Use "db-data-generator [command] --help" for more information about a command.
+
+$ db-data-generator -f definition.yaml -l 1000000 -u root -p test -D test
+```
+
+```yaml
+# kind of database
+# current available value is only mysql
+database: mysql
+tables:
+  - name: users
+    columns:
+      - name: id
+        type: string
+        value: xid
+      - name: name
+        type: string
+        value:
+          - gorilla
+          - godzilla
+          - dog
+          - cat
+          - human
+      - name: age
+        type: int
+        value:
+          - 10
+          - 15
+          - 33
+```
 
 ## Author
 skanehira
