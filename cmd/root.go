@@ -32,7 +32,7 @@ type Table struct {
 	Columns []Column `yaml:"columns"`
 }
 
-type Database struct {
+type Definition struct {
 	Database string  `yaml:"database"`
 	Tables   []Table `yaml:"tables"`
 }
@@ -54,55 +54,70 @@ func mustGetFlag(flag *flag.FlagSet, name string) string {
 	return v
 }
 
-func insert(tx *sql.Tx, db Database, limit int) error {
+func parseValue(i interface{}) (string, error) {
+	switch v := i.(type) {
+	case string:
+		if v == "xid" {
+			return `"` + xid.New().String() + `"`, nil
+		} else {
+			return `"` + v + `"`, nil
+		}
+	case uint64, uint32, uint8, uint, int, int8, int32, int64:
+		return fmt.Sprintf("%v", v), nil
+	case float32, float64:
+		return fmt.Sprintf("%v", v), nil
+	case []interface{}:
+		return parseValue(v[rand.Intn(len(v))])
+	}
+	return "", fmt.Errorf("invalid value: %v", i)
+}
+
+func insert(db *sql.DB, def Definition, limit int) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
 	rand.Seed(time.Now().UnixNano())
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	for _, t := range db.Tables {
+	for _, t := range def.Tables {
 		cols := make([]string, len(t.Columns))
 		for i, cn := range t.Columns {
 			cols[i] = cn.Name
 		}
+		q := fmt.Sprintf(`INSERT INTO %s (%s) VALUES `, t.Name, strings.Join(cols, ","))
+		var vs []string
 
-		var start int
-		offset := 10000
-
-		for start < limit {
-			q := fmt.Sprintf(`INSERT INTO %s (%s) VALUES `, t.Name, strings.Join(cols, ","))
-
-			vs := make([]string, offset)
-			for i := 0; i < offset; i++ {
-				var values []string
-
-				for _, col := range t.Columns {
-					switch v := col.Value.(type) {
-					case string:
-						if v == "xid" {
-							values = append(values, `"`+xid.New().String()+`"`)
-						} else {
-							values = append(values, v)
-						}
-					case []interface{}:
-						switch vv := v[rand.Intn(len(v))].(type) {
-						case string:
-							values = append(values, `"`+vv+`"`)
-						case int:
-							values = append(values, strconv.Itoa(vv))
-						}
-					}
+		for i := 0; i < limit; i++ {
+			if i > 0 && i%1000 == 0 {
+				if _, err := tx.ExecContext(ctx, q+strings.Join(vs, ",")); err != nil {
+					return err
 				}
-				vs[i] = "(" + strings.Join(values, ",") + ")"
+				vs = []string{}
 			}
-			q += strings.Join(vs, ",")
-
-			if _, err := tx.ExecContext(ctx, q); err != nil {
-				return err
+			values := make([]string, len(t.Columns))
+			for j, col := range t.Columns {
+				v, err := parseValue(col.Value)
+				if err != nil {
+					return err
+				}
+				values[j] = v
 			}
+			vs = append(vs, "("+strings.Join(values, ",")+")")
+		}
 
-			start += offset
+		if _, err := tx.ExecContext(ctx, q+strings.Join(vs, ",")); err != nil {
+			return err
 		}
 	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
 	return nil
 }
 
@@ -126,7 +141,7 @@ func run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var setting Database
+	var def Definition
 
 	f, err := os.Open(file)
 	if err != nil {
@@ -134,31 +149,22 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	defer f.Close()
 	dec := yaml.NewDecoder(f)
-	if err := dec.Decode(&setting); err != nil {
+	if err := dec.Decode(&def); err != nil {
 		return err
 	}
 
-	db, err := sql.Open(setting.Database, fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=true&loc=UTC",
-		user, pass, host, port, dbname))
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=true&loc=UTC",
+		user, pass, host, port, dbname)
+	db, err := sql.Open(def.Database, dsn)
+
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
 	log.Println("start insert...")
 	defer log.Println("finished insert")
-	if err := insert(tx, setting, limit); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
+	if err := insert(db, def, limit); err != nil {
 		return err
 	}
 
@@ -179,7 +185,7 @@ func Execute() {
 	rootCmd.PersistentFlags().StringP("port", "P", "", "database port")
 	rootCmd.PersistentFlags().StringP("database", "D", "", "database name")
 	rootCmd.PersistentFlags().StringP("file", "f", "", "setting file")
-	rootCmd.PersistentFlags().StringP("limit", "l", "", "gererate table rows limit")
+	rootCmd.PersistentFlags().StringP("limit", "l", "", "generate table rows limit")
 
 	if err := rootCmd.Execute(); err != nil {
 		exitError(err)
