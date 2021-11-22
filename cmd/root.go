@@ -184,7 +184,7 @@ func Execute() {
 	rootCmd.PersistentFlags().StringP("password", "p", "", "password")
 	rootCmd.PersistentFlags().StringP("port", "P", "", "database port")
 	rootCmd.PersistentFlags().StringP("database", "D", "", "database name")
-	rootCmd.PersistentFlags().StringP("file", "f", "", "setting file")
+	rootCmd.PersistentFlags().StringP("file", "f", "", "definition file")
 	rootCmd.PersistentFlags().StringP("limit", "l", "", "generate table rows limit")
 
 	if err := rootCmd.Execute(); err != nil {

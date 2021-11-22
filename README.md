@@ -22,7 +22,7 @@ Available Commands:
 
 Flags:
   -D, --database string   database name
-  -f, --file string       setting file
+  -f, --file string       definition file
   -h, --help              help for db-data-generator
       --host string       database host
   -l, --limit string      generate table rows limit
@@ -43,18 +43,15 @@ tables:
   - name: users
     columns:
       - name: id
-        type: string
         value: xid
       - name: name
-        type: string
-        value:
+        value: # if value is array, value will picked random
           - gorilla
           - godzilla
           - dog
           - cat
           - human
       - name: age
-        type: int
         value:
           - 10
           - 15
