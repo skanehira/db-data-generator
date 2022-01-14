@@ -7,7 +7,7 @@ require github.com/spf13/cobra v1.3.0
 require (
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/goccy/go-yaml v1.9.4
+	github.com/goccy/go-yaml v1.9.5
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/rs/xid v1.3.0
 	github.com/spf13/pflag v1.0.5
