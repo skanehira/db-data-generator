@@ -9,7 +9,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/goccy/go-yaml v1.9.8
 	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/rs/xid v1.3.0
+	github.com/rs/xid v1.4.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/sys v0.0.0-20220406163625-3f8b81556e12 // indirect
 )
